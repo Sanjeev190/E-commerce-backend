@@ -23,10 +23,9 @@ router.get('/', async(req, res) => {
   // be sure to include its associated Category and Tag data
 router.get('/:id', async(req, res) => {
   try{
-    const productData=await Product.findbyPk(req.params.id,{
-      include:[{model:Category}],
+    const productData=await Product.findByPk(req.params.id,{
+      include:[{model:Category},{model:Tag}],
       
-      include:[{model:Tag}]
     })
     res.status(200).json(productData);
   }
@@ -51,19 +50,23 @@ router.post('/',async (req, res) => {
     price:req.body.price,
     stock:req.body.stock,
     category_id:req.body.category_id
+  
 
   })
     .then((product) => {
       // if there's product tags, we need to create pairings to bulk create in the ProductTag model
-      if (req.body.tagIds.length) {
+      if (req.body.tagIds && req.body.tagIds.length) {
         const productTagIdArr = req.body.tagIds.map((tag_id) => {
           return {
             product_id: product.id,
             tag_id,
           };
+        
         });
+        console.log(productTagIdArr)
         return ProductTag.bulkCreate(productTagIdArr);
       }
+    
       // if no product tags, just respond
       res.status(200).json(product);
     })
@@ -77,7 +80,14 @@ router.post('/',async (req, res) => {
 // update product
 router.put('/:id', (req, res) => {
   // update product data
-  Product.update(req.body, {
+  Product.update(
+    {
+      product_name: req.body.product_name,
+      price:req.body.price,
+      stock:req.body.stock,
+      category_id:req.body.category_id
+    }, {
+
     where: {
       id: req.params.id,
     },
@@ -86,7 +96,9 @@ router.put('/:id', (req, res) => {
       if (req.body.tagIds && req.body.tagIds.length) {
         
         ProductTag.findAll({
-          where: { product_id: req.params.id }
+          where: { 
+            product_id: req.params.id 
+          }
         }).then((productTags) => {
           // create filtered list of new tag_ids
           const productTagIds = productTags.map(({ tag_id }) => tag_id);
@@ -110,11 +122,14 @@ router.put('/:id', (req, res) => {
           ]);
         });
       }
+      // const UpdatedProduct=Product.findByPk(req.params.id,{
+      //   include:[{model:Category},{model:Tag}],
+      // })
 
-      return res.json(product);
+      res.status(200).json(product);
     })
     .catch((err) => {
-      // console.log(err);
+      console.log(err);
       res.status(400).json(err);
     });
 });
